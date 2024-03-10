@@ -5,7 +5,6 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -35,7 +34,6 @@ import org.afplib.afplib.FullyQualifiedName;
 import org.afplib.afplib.FullyQualifiedNameFQNType;
 import org.afplib.afplib.IMM;
 import org.afplib.afplib.IOB;
-import org.afplib.afplib.IPG;
 import org.afplib.afplib.IPO;
 import org.afplib.afplib.IPS;
 import org.afplib.afplib.MCC;
@@ -82,36 +80,36 @@ public class AFPCombine {
 
     private static final Logger log = LoggerFactory.getLogger(AFPCombine.class);
 
-    class Resource {
+    static class Resource {
         long start, end, ersPos;
         byte[] content;
         String hash;
     }
 
-    class MediumMap {
+    static class MediumMap {
         long start, end;
         byte[] content;
-        LinkedList<SF> sfs = new LinkedList<SF>();
+        LinkedList<SF> sfs = new LinkedList<>();
         String hash;
     }
 
-    class InputFile {
+    static class InputFile {
         File file;
-        List<ResourceKey> resources = new LinkedList<ResourceKey>();
-        Map<ResourceKey, Resource> filePos = new HashMap<ResourceKey, Resource>();
-        Map<ResourceKey, String> renamings = new HashMap<ResourceKey, String>();
-        Map<String, String> renameIMM = new HashMap<String, String>();
+        List<ResourceKey> resources = new LinkedList<>();
+        Map<ResourceKey, Resource> filePos = new HashMap<>();
+        Map<ResourceKey, String> renamings = new HashMap<>();
+        Map<String, String> renameIMM = new HashMap<>();
         long documentStart;
-        LinkedList<SF> formdef = new LinkedList<SF>();
-        LinkedList<String> mmNames = new LinkedList<String>();
-        Map<String, MediumMap> mediumMaps = new HashMap<String, MediumMap>();
+        LinkedList<SF> formdef = new LinkedList<>();
+        LinkedList<String> mmNames = new LinkedList<>();
+        Map<String, MediumMap> mediumMaps = new HashMap<>();
     }
 
     public static void main(String[] args) {
 
         log.info("starting...");
 
-        LinkedList<String> f = new LinkedList<String>();
+        LinkedList<String> f = new LinkedList<>();
         String out = null;
 
         for (int i = 0; i < args.length; i++) {
@@ -124,23 +122,23 @@ public class AFPCombine {
         log.debug("out: {}", out);
 
         try {
-            new AFPCombine(out, (String[]) f.toArray(new String[f.size()])).run();
+            new AFPCombine(out, f.toArray(new String[0])).run();
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error", e);
             System.exit(1);
         }
 
         log.info("done.");
     }
 
-    private String outFile;
-    private String[] inFiles;
-    private InputFile[] files;
-    private MessageDigest algorithm;
-    private LinkedList<String> resourceNames = new LinkedList<String>();
-    private LinkedList<String> mmNames = new LinkedList<String>();
+    private final String outFile;
+    private final String[] inFiles;
+    private final InputFile[] files;
+    private final MessageDigest algorithm;
+    private final LinkedList<String> resourceNames = new LinkedList<>();
+    private final LinkedList<String> mmNames = new LinkedList<>();
     private SF[] formdef;
-    private boolean checkResourceEquality = true;
+    private final boolean checkResourceEquality = true;
 
     public AFPCombine(String outFile, String[] inFiles) {
         this.outFile = outFile;
@@ -166,7 +164,7 @@ public class AFPCombine {
         writeDocuments();
     }
 
-    private void scanResources() throws IOException, FileNotFoundException {
+    private void scanResources() throws IOException {
         for (int i = 0; i < inFiles.length; i++) {
             files[i] = new InputFile();
 
@@ -174,7 +172,7 @@ public class AFPCombine {
             try (FileInputStream fin = new FileInputStream(files[i].file);
                  AfpInputStream ain = new AfpInputStream(new BufferedInputStream(fin))) {
                 SF sf;
-                long filepos = 0, prevFilePos = 0;
+                long filepos, prevFilePos = 0;
                 ByteArrayOutputStream buffer = null;
                 ResourceKey key = null;
                 Resource resource = null;
@@ -226,14 +224,18 @@ public class AFPCombine {
                         buffer.write(ain.getLastReadBuffer());
 
                     if (sf instanceof EMM && isFirstFormdef) {
-                        mediumMap.end = filepos;
-                        byte[] byteArray = buffer.toByteArray();
-                        mediumMap.hash = getHash(byteArray);
-                        if (checkResourceEquality) mediumMap.content = byteArray;
-                        if (!mmNames.contains(mmName))
-                            mmNames.add(mmName);
+                        if (mediumMap != null) {
+                            mediumMap.end = filepos;
+                            if (buffer != null) {
+                                byte[] byteArray = buffer.toByteArray();
+                                mediumMap.hash = getHash(byteArray);
+                                if (checkResourceEquality) mediumMap.content = byteArray;
+                                if (!mmNames.contains(mmName))
+                                    mmNames.add(mmName);
 
-                        log.debug("{}@{}-{}: found {}, hash {}", files[i].file, mediumMap.start, mediumMap.end, mmName, mediumMap.hash);
+                                log.debug("{}@{}-{}: found {}, hash {}", files[i].file, mediumMap.start, mediumMap.end, mmName, mediumMap.hash);
+                            }
+                        }
 
                         mmName = null;
                         mediumMap = null;
@@ -249,15 +251,16 @@ public class AFPCombine {
                             // this is the end of a formdef, which we don't save
                             isFirstFormdef = false;
                         } else {
-                            resource.ersPos = prevFilePos;
-                            resource.end = filepos;
-                            byte[] byteArray = buffer.toByteArray();
-                            resource.hash = getHash(byteArray);
-                            if (checkResourceEquality) resource.content = byteArray;
-                            if (!resourceNames.contains(key.getName()))
-                                resourceNames.add(key.getName());
-
-                            log.debug("{}@{}-{}: found {}, hash {}", files[i].file, resource.start, resource.end, key, resource.hash);
+                            if (resource != null) {
+                                resource.ersPos = prevFilePos;
+                                resource.end = filepos;
+                                byte[] byteArray = buffer.toByteArray();
+                                resource.hash = getHash(byteArray);
+                                if (checkResourceEquality) resource.content = byteArray;
+                                if (!resourceNames.contains(key.getName()))
+                                    resourceNames.add(key.getName());
+                                log.debug("{}@{}-{}: found {}, hash {}", files[i].file, resource.start, resource.end, key, resource.hash);
+                            }
 
                             buffer = null;
                             key = null;
@@ -340,8 +343,8 @@ public class AFPCombine {
     }
 
     private void buildFormdef() {
-        LinkedList<SF> formdef = new LinkedList<SF>();
-        LinkedList<String> mmsWritten = new LinkedList<String>();
+        LinkedList<SF> formdef = new LinkedList<>();
+        LinkedList<String> mmsWritten = new LinkedList<>();
 
 
         formdef.add(AfplibFactory.eINSTANCE.createBFM());
@@ -349,7 +352,7 @@ public class AFPCombine {
         for (int i = 0; i < inFiles.length; i++) {
 
             // build environment group
-            LinkedList<SF> bdg = new LinkedList<SF>();
+            LinkedList<SF> bdg = new LinkedList<>();
             boolean isbdg = false;
             for (SF sf : files[i].formdef) {
                 if (sf instanceof BDG) {
@@ -407,14 +410,14 @@ public class AFPCombine {
 
         formdef.add(AfplibFactory.eINSTANCE.createEFM());
 
-        this.formdef = (SF[]) formdef.toArray(new SF[formdef.size()]);
+        this.formdef = formdef.toArray(new SF[0]);
     }
 
     @SuppressWarnings("unchecked")
     private <T extends SF> void add(LinkedList<SF> dest, LinkedList<SF> bdg,
                                     LinkedList<SF> map, Class<T> clazz) {
 
-        LinkedList<T> result = new LinkedList<T>();
+        LinkedList<T> result = new LinkedList<>();
 
         for (SF sf : map) {
             if (clazz.isInstance(sf) || (clazz.equals(PGP.class) && sf instanceof PGP1)) {
@@ -433,7 +436,7 @@ public class AFPCombine {
     }
 
     private void writeResourceGroup() throws IOException {
-        LinkedList<ResourceKey> resourcesWritten = new LinkedList<ResourceKey>();
+        LinkedList<ResourceKey> resourcesWritten = new LinkedList<>();
 
         try (AfpOutputStream aout = new AfpOutputStream(new BufferedOutputStream(new FileOutputStream(outFile, false)))) {
             BRG brg = AfplibFactory.eINSTANCE.createBRG();
@@ -458,8 +461,7 @@ public class AFPCombine {
             log.info("writing resource group");
 
             for (int i = 0; i < inFiles.length; i++) {
-                FileInputStream fin;
-                try (AfpInputStream ain = new AfpInputStream(fin = new FileInputStream(inFiles[i]))) {
+                try (FileInputStream fin = new FileInputStream(inFiles[i]); AfpInputStream ain = new AfpInputStream(fin)) {
                     for (ResourceKey key : files[i].resources) {
 
                         if (key.getType() == ResourceObjectTypeObjType.CONST_FORM_MAP_VALUE) {
@@ -522,7 +524,7 @@ public class AFPCombine {
                 if (t instanceof FullyQualifiedName) {
                     FullyQualifiedName fqn = (FullyQualifiedName) t;
                     if (fqn.getFQNType() == null) continue;
-                    if (FullyQualifiedNameFQNType.CONST_REPLACE_FIRST_GID_NAME_VALUE != fqn.getFQNType().intValue())
+                    if (FullyQualifiedNameFQNType.CONST_REPLACE_FIRST_GID_NAME_VALUE != fqn.getFQNType())
                         continue;
                     fqn.setFQName(newName);
                     break;
@@ -536,47 +538,42 @@ public class AFPCombine {
     private void writeDocuments() throws IOException {
         for (int i = 0; i < inFiles.length; i++) {
             log.info("writing documents from {}", files[i].file.getName());
-            try (AfpInputStream in = new AfpInputStream(new FileInputStream(inFiles[i]));
+            try (FileInputStream fin = new FileInputStream(inFiles[i]); AfpInputStream in = new AfpInputStream(fin);
                  AfpOutputStream out = new AfpOutputStream(
                          new BufferedOutputStream(new FileOutputStream(outFile, true)))) {
 
                 in.position(files[i].documentStart);
                 final InputFile file = files[i];
 
-                AfpFilter.filter(in, out, new Filter() {
-                    @Override
-                    public STATE onStructuredField(SF sf) {
-                        log.trace("{}", sf);
-                        switch (sf.getId()) {
-                            case SFName.IMM_VALUE:
-                                return rename(file, (IMM) sf);
-                            case SFName.IOB_VALUE:
-                                return rename(file, (IOB) sf);
-                            case SFName.IPG_VALUE:
-                                return rename(file, (IPG) sf);
-                            case SFName.IPO_VALUE:
-                                return rename(file, (IPO) sf);
-                            case SFName.IPS_VALUE:
-                                return rename(file, (IPS) sf);
-                            case SFName.MCF_VALUE:
-                                return rename(file, (MCF) sf);
-                            case SFName.MCF1_VALUE:
-                                return rename(file, (MCF1) sf);
-                            case SFName.MDR_VALUE:
-                                return rename(file, (MDR) sf);
-                            case SFName.MMO_VALUE:
-                                return rename(file, (MMO) sf);
-                            case SFName.MPG_VALUE:
-                                return rename(file, (MPG) sf);
-                            case SFName.MPO_VALUE:
-                                return rename(file, (MPO) sf);
-                            case SFName.MPS_VALUE:
-                                return rename(file, (MPS) sf);
-                        }
-                        return STATE.UNTOUCHED;
+                AfpFilter.filter(in, out, sf -> {
+                    log.trace("{}", sf);
+                    switch (sf.getId()) {
+                        case SFName.IMM_VALUE:
+                            return rename(file, (IMM) sf);
+                        case SFName.IOB_VALUE:
+                            return rename(file, (IOB) sf);
+                        case SFName.IPG_VALUE:
+                            return rename();
+                        case SFName.IPO_VALUE:
+                            return rename(file, (IPO) sf);
+                        case SFName.IPS_VALUE:
+                            return rename(file, (IPS) sf);
+                        case SFName.MCF_VALUE:
+                            return rename(file, (MCF) sf);
+                        case SFName.MCF1_VALUE:
+                            return rename(file, (MCF1) sf);
+                        case SFName.MDR_VALUE:
+                            return rename(file, (MDR) sf);
+                        case SFName.MMO_VALUE:
+                            return rename(file, (MMO) sf);
+                        case SFName.MPG_VALUE:
+                            return rename((MPG) sf);
+                        case SFName.MPO_VALUE:
+                            return rename(file, (MPO) sf);
+                        case SFName.MPS_VALUE:
+                            return rename(file, (MPS) sf);
                     }
-
-
+                    return STATE.UNTOUCHED;
                 });
 
             }
@@ -588,7 +585,7 @@ public class AFPCombine {
             if (t instanceof FullyQualifiedName) {
                 FullyQualifiedName fqn = (FullyQualifiedName) t;
                 if (fqn.getFQNType() == null) continue;
-                if (FullyQualifiedNameFQNType.CONST_REPLACE_FIRST_GID_NAME_VALUE != fqn.getFQNType().intValue())
+                if (FullyQualifiedNameFQNType.CONST_REPLACE_FIRST_GID_NAME_VALUE != fqn.getFQNType())
                     continue;
                 fqn.setFQName(newName);
                 break;
@@ -596,8 +593,7 @@ public class AFPCombine {
         }
     }
 
-    private Filter.STATE rename(InputFile file, IMM sf) {
-        IMM imm = (IMM) sf;
+    private Filter.STATE rename(InputFile file, IMM imm) {
         if (file.renameIMM.containsKey(imm.getMMPName())) {
             String newName = file.renameIMM.get(imm.getMMPName());
             imm.setMMPName(newName);
@@ -620,7 +616,7 @@ public class AFPCombine {
         return Filter.STATE.UNTOUCHED;
     }
 
-    private Filter.STATE rename(InputFile file, IPG sf) {
+    private Filter.STATE rename() {
         return Filter.STATE.UNTOUCHED;
     }
 
@@ -789,7 +785,7 @@ public class AFPCombine {
         return result;
     }
 
-    private Filter.STATE rename(InputFile file, MPG sf) {
+    private Filter.STATE rename(MPG sf) {
         log.warn("MPG is not supported: {}", sf);
         return Filter.STATE.UNTOUCHED;
     }
@@ -800,7 +796,7 @@ public class AFPCombine {
             log.trace("{}", rg);
             for (Triplet t : rg.getTriplets()) {
                 if (t instanceof FullyQualifiedName)
-                    if (((FullyQualifiedName) t).getFQNType().intValue() == FullyQualifiedNameFQNType.CONST_RESOURCE_OBJECT_REFERENCE_VALUE) {
+                    if (((FullyQualifiedName) t).getFQNType() == FullyQualifiedNameFQNType.CONST_RESOURCE_OBJECT_REFERENCE_VALUE) {
                         ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_OVERLAY, ((FullyQualifiedName) t).getFQName());
                         if (file.renamings.containsKey(key)) {
                             String newName = file.renamings.get(key);
@@ -866,11 +862,11 @@ public class AFPCombine {
     private String getHash(byte[] bytes) {
         algorithm.reset();
         algorithm.update(bytes);
-        byte messageDigest[] = algorithm.digest();
+        byte[] messageDigest = algorithm.digest();
 
-        StringBuffer hexString = new StringBuffer();
-        for (int i = 0; i < messageDigest.length; i++) {
-            hexString.append(Integer.toHexString(0xFF & messageDigest[i]));
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : messageDigest) {
+            hexString.append(Integer.toHexString(0xFF & b));
         }
         return hexString.toString();
     }
