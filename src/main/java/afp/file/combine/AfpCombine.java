@@ -27,7 +27,7 @@ import java.util.stream.Stream;
 
 public class AfpCombine {
 
-    private static final Logger log = LoggerFactory.getLogger(AfpCombine.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AfpCombine.class);
 
     static class Resource {
         long start, end, ersPos;
@@ -62,7 +62,7 @@ public class AfpCombine {
 
     public static void main(String[] args) {
 
-        log.info("starting...");
+        LOGGER.info("starting...");
 
         LinkedList<String> f = new LinkedList<>();
         String out = null;
@@ -73,17 +73,17 @@ public class AfpCombine {
             else f.add(args[i]);
         }
 
-        log.debug("in: {}", StringUtils.join(f, ':'));
-        log.debug("out: {}", out);
+        LOGGER.debug("in: {}", StringUtils.join(f, ':'));
+        LOGGER.debug("out: {}", out);
 
         try {
             new AfpCombine(out, f.toArray(new String[0])).run();
         } catch (Exception e) {
-            log.error("Error", e);
+            LOGGER.error("Error", e);
             System.exit(1);
         }
 
-        log.info("done.");
+        LOGGER.info("done.");
     }
 
     private final String outFile;
@@ -153,7 +153,7 @@ public class AfpCombine {
                     }
 
                     if (sf instanceof BFM && isFirstFormdef) {
-                        log.debug("processing formdef");
+                        LOGGER.debug("processing formdef");
                         processingFormdef = true;
                     }
 
@@ -163,7 +163,7 @@ public class AfpCombine {
                     if (sf instanceof BMM && isFirstFormdef) {
                         BMM bmm = (BMM) sf;
                         mmName = bmm.getMMName();
-                        log.debug("{}: found medium map {}", files[i].file, mmName);
+                        LOGGER.debug("{}: found medium map {}", files[i].file, mmName);
                         files[i].mmNames.add(mmName);
                         files[i].mediumMaps.put(mmName, mediumMap = new MediumMap());
                         mediumMap.start = prevFilePos;
@@ -187,7 +187,7 @@ public class AfpCombine {
                                 if (!mmNames.contains(mmName))
                                     mmNames.add(mmName);
 
-                                log.debug("{}@{}-{}: found {}, hash {}", files[i].file, mediumMap.start, mediumMap.end, mmName, mediumMap.hash);
+                                LOGGER.debug("{}@{}-{}: found {}, hash {}", files[i].file, mediumMap.start, mediumMap.end, mmName, mediumMap.hash);
                             }
                         }
 
@@ -213,7 +213,7 @@ public class AfpCombine {
                                 if (checkResourceEquality) resource.content = byteArray;
                                 if (!resourceNames.contains(key.getName()))
                                     resourceNames.add(key.getName());
-                                log.debug("{}@{}-{}: found {}, hash {}", files[i].file, resource.start, resource.end, key, resource.hash);
+                                LOGGER.debug("{}@{}-{}: found {}, hash {}", files[i].file, resource.start, resource.end, key, resource.hash);
                             }
 
                             buffer = null;
@@ -236,7 +236,7 @@ public class AfpCombine {
                 InputFile f1 = files[i];
                 InputFile f2 = files[j];
 
-                log.debug("comparing resources in {} and {}", f1.file.getName(), f2.file.getName());
+                LOGGER.debug("comparing resources in {} and {}", f1.file.getName(), f2.file.getName());
 
                 for (ResourceKey k1 : f1.resources) {
                     if (f2.resources.contains(k1)
@@ -247,16 +247,16 @@ public class AfpCombine {
                         if (h1.equals(h2) && equals(f1.filePos.get(k1).content, f2.filePos.get(k1).content)) {
                             if (f1.renamings.containsKey(k1)) {
                                 String newName = f1.renamings.get(k1);
-                                log.debug("resource {} is same in {} and {}, but being renamed to {}", k1.getName(), f1.file.getName(), f2.file.getName(), newName);
+                                LOGGER.debug("resource {} is same in {} and {}, but being renamed to {}", k1.getName(), f1.file.getName(), f2.file.getName(), newName);
                                 f2.renamings.put(k1, newName);
                             } else {
-                                log.debug("resource {} is same in {} and {}", k1.getName(), f1.file.getName(), f2.file.getName());
+                                LOGGER.debug("resource {} is same in {} and {}", k1.getName(), f1.file.getName(), f2.file.getName());
                             }
                         } else {
                             String newName = getNewResourceName(k1.getName(), h2);
                             f2.renamings.put(k1, newName);
                             resourceNames.add(newName);
-                            log.debug("{}: renaming resource {} to {}", f2.file.getName(), k1.getName(), newName);
+                            LOGGER.debug("{}: renaming resource {} to {}", f2.file.getName(), k1.getName(), newName);
                         }
                     }
                 }
@@ -272,16 +272,16 @@ public class AfpCombine {
                                 && equals(f1.mediumMaps.get(mmName).content, f2.mediumMaps.get(mmName).content)) {
                             if (f1.renameIMM.containsKey(mmName)) {
                                 String newName = f1.renameIMM.get(mmName);
-                                log.debug("medium map {} is same in {} and {}, but being renamed to {}", mmName, f1.file.getName(), f2.file.getName(), newName);
+                                LOGGER.debug("medium map {} is same in {} and {}, but being renamed to {}", mmName, f1.file.getName(), f2.file.getName(), newName);
                                 f2.renameIMM.put(mmName, newName);
                             } else {
-                                log.debug("medium map {} is same in {} and {}", mmName, f1.file.getName(), f2.file.getName());
+                                LOGGER.debug("medium map {} is same in {} and {}", mmName, f1.file.getName(), f2.file.getName());
                             }
                         } else {
                             String newName = getNewFormdefName(mmName, h2);
                             f2.renameIMM.put(mmName, newName);
                             mmNames.add(newName);
-                            log.debug("{}: renaming medium map {} to {}", f2.file.getName(), mmName, newName);
+                            LOGGER.debug("{}: renaming medium map {} to {}", f2.file.getName(), mmName, newName);
                         }
 
                     }
@@ -325,17 +325,17 @@ public class AfpCombine {
                     String newName = files[i].renameIMM.get(mmName);
 
                     if (mmsWritten.contains(newName)) {
-                        log.debug("not writing resource {} as {} again", mmName, newName);
+                        LOGGER.debug("not writing resource {} as {} again", mmName, newName);
                         continue;
                     }
 
                     bmm.setMMName(newName);
-                    log.debug("writing medium map {} as {} from {}", mmName, bmm.getMMName(), files[i].file.getName());
+                    LOGGER.debug("writing medium map {} as {} from {}", mmName, bmm.getMMName(), files[i].file.getName());
                 } else if (mmsWritten.contains(mmName)) {
-                    log.debug("not writing medium map {} again", mmName);
+                    LOGGER.debug("not writing medium map {} again", mmName);
                     continue;
                 } else {
-                    log.debug("writing medium map {} from {}", mmName, files[i].file.getName());
+                    LOGGER.debug("writing medium map {} from {}", mmName, files[i].file.getName());
                 }
 
                 formdef.add(bmm);
@@ -412,14 +412,14 @@ public class AfpCombine {
                 aout.writeStructuredField(ers);
             }
 
-            log.info("writing resource group");
+            LOGGER.info("writing resource group");
 
             for (int i = 0; i < inFiles.length; i++) {
                 try (final AfpInputStream ain = AfpFiles.newAfpInputStream(files[i].path)) {
                     for (ResourceKey key : files[i].resources) {
 
                         if (key.getType() == ResourceObjectTypeObjType.CONST_FORM_MAP_VALUE) {
-                            log.debug("not writing formdef {}", key.getName());
+                            LOGGER.debug("not writing formdef {}", key.getName());
                             continue;
                         }
 
@@ -430,18 +430,18 @@ public class AfpCombine {
                             String newName = files[i].renamings.get(key);
                             ResourceKey newkey = new ResourceKey(key.getType(), newName, key.getObjId());
                             if (resourcesWritten.contains(newkey)) {
-                                log.debug("not writing resource {} as {} again", key.getName(), newName);
+                                LOGGER.debug("not writing resource {} as {} again", key.getName(), newName);
                                 continue;
                             }
                             renameBRSERS(brs, newName);
                             resourcesWritten.add(newkey);
-                            log.debug("writing resource {} as {} from {}", key.getName(), newName, files[i].file.getName());
+                            LOGGER.debug("writing resource {} as {} from {}", key.getName(), newName, files[i].file.getName());
                         } else if (resourcesWritten.contains(key)) {
-                            log.debug("not writing resource {} again", key.getName());
+                            LOGGER.debug("not writing resource {} again", key.getName());
                             continue;
                         } else {
                             resourcesWritten.add(key);
-                            log.debug("writing resource {} from {}", key.getName(), files[i].file.getName());
+                            LOGGER.debug("writing resource {} from {}", key.getName(), files[i].file.getName());
                         }
 
                         aout.writeStructuredField(brs);
@@ -491,7 +491,7 @@ public class AfpCombine {
 
     private void writeDocuments() throws IOException {
         for (int i = 0; i < inFiles.length; i++) {
-            log.info("writing documents from {}", files[i].file.getName());
+            LOGGER.info("writing documents from {}", files[i].file.getName());
             try (final AfpInputStream ain = AfpFiles.newAfpInputStream(files[i].path);
                  final AfpOutputStream aout = AfpFiles.newAfpBufferedOutputStream(Paths.get(outFile))) {
 
@@ -499,7 +499,7 @@ public class AfpCombine {
                 final InputFile file = files[i];
 
                 AfpFilter.filter(ain, aout, sf -> {
-                    log.trace("{}", sf);
+                    LOGGER.trace("{}", sf);
                     switch (sf.getId()) {
                         case SFName.IMM_VALUE:
                             return rename(file, (IMM) sf);
@@ -551,7 +551,7 @@ public class AfpCombine {
             String newName = file.renameIMM.get(imm.getMMPName());
             imm.setMMPName(newName);
             overrideGid(imm.getTriplets(), newName);
-            log.trace("rename {}", newName);
+            LOGGER.trace("rename {}", newName);
             return Filter.STATE.MODIFIED;
         }
         return Filter.STATE.UNTOUCHED;
@@ -563,7 +563,7 @@ public class AfpCombine {
             String newName = file.renamings.get(key);
             sf.setObjName(newName);
             overrideGid(sf.getTriplets(), newName);
-            log.trace("rename {}", newName);
+            LOGGER.trace("rename {}", newName);
             return Filter.STATE.MODIFIED;
         }
         return Filter.STATE.UNTOUCHED;
@@ -579,7 +579,7 @@ public class AfpCombine {
             String newName = file.renamings.get(key);
             sf.setOvlyName(newName);
             overrideGid(sf.getTriplets(), newName);
-            log.trace("rename {}", newName);
+            LOGGER.trace("rename {}", newName);
             return Filter.STATE.MODIFIED;
         }
         return Filter.STATE.UNTOUCHED;
@@ -591,7 +591,7 @@ public class AfpCombine {
             String newName = file.renamings.get(key);
             sf.setPsegName(newName);
             overrideGid(sf.getTriplets(), newName);
-            log.trace("rename {}", newName);
+            LOGGER.trace("rename {}", newName);
             return Filter.STATE.MODIFIED;
         }
         return Filter.STATE.UNTOUCHED;
@@ -603,13 +603,13 @@ public class AfpCombine {
             for (Triplet t : rg.getTriplets()) {
                 if (t instanceof FullyQualifiedName) {
                     FullyQualifiedName fqn = (FullyQualifiedName) t;
-                    log.trace("{}", fqn);
+                    LOGGER.trace("{}", fqn);
                     if (fqn.getFQNType() == FullyQualifiedNameFQNType.CONST_FONT_CHARACTER_SET_NAME_REFERENCE_VALUE) {
                         ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_FONT_CHARACTER_SET, fqn.getFQName());
                         if (file.renamings.containsKey(key)) {
                             String newName = file.renamings.get(key);
                             fqn.setFQName(newName);
-                            log.trace("rename {}", newName);
+                            LOGGER.trace("rename {}", newName);
                             result = Filter.STATE.MODIFIED;
                         }
                     }
@@ -618,7 +618,7 @@ public class AfpCombine {
                         if (file.renamings.containsKey(key)) {
                             String newName = file.renamings.get(key);
                             fqn.setFQName(newName);
-                            log.trace("rename {}", newName);
+                            LOGGER.trace("rename {}", newName);
                             result = Filter.STATE.MODIFIED;
                         }
                     }
@@ -627,7 +627,7 @@ public class AfpCombine {
                         if (file.renamings.containsKey(key)) {
                             String newName = file.renamings.get(key);
                             fqn.setFQName(newName);
-                            log.trace("rename {}", newName);
+                            LOGGER.trace("rename {}", newName);
                             result = Filter.STATE.MODIFIED;
                         }
                     }
@@ -640,7 +640,7 @@ public class AfpCombine {
     private Filter.STATE rename(InputFile file, MCF1 sf) {
         STATE result = Filter.STATE.UNTOUCHED;
         for (MCF1RG rg : sf.getRG()) {
-            log.trace("{}", rg);
+            LOGGER.trace("{}", rg);
 
             byte[] fcsname = rg.getFCSName().getBytes(Charset.forName("IBM500"));
             if (fcsname[0] != (byte) 0xff && fcsname[1] != (byte) 0xff) {
@@ -648,7 +648,7 @@ public class AfpCombine {
                 if (file.renamings.containsKey(key)) {
                     String newName = file.renamings.get(key);
                     rg.setFCSName(newName);
-                    log.trace("rename {}", newName);
+                    LOGGER.trace("rename {}", newName);
                     result = Filter.STATE.MODIFIED;
                 }
             }
@@ -659,7 +659,7 @@ public class AfpCombine {
                 if (file.renamings.containsKey(key)) {
                     String newName = file.renamings.get(key);
                     rg.setCFName(newName);
-                    log.trace("rename {}", newName);
+                    LOGGER.trace("rename {}", newName);
                     result = Filter.STATE.MODIFIED;
                 }
             }
@@ -670,7 +670,7 @@ public class AfpCombine {
                 if (file.renamings.containsKey(key)) {
                     String newName = file.renamings.get(key);
                     rg.setCPName(newName);
-                    log.trace("rename {}", newName);
+                    LOGGER.trace("rename {}", newName);
                     result = Filter.STATE.MODIFIED;
                 }
             }
@@ -686,7 +686,7 @@ public class AfpCombine {
             EList<Triplet> mcfGroup = rg.getTriplets();
             for (EObject triplet : mcfGroup) {
                 if (triplet instanceof FullyQualifiedName) {
-                    log.trace("{}", triplet);
+                    LOGGER.trace("{}", triplet);
                     int fqnType = ((FullyQualifiedName) triplet).getFQNType();
                     String name = ((FullyQualifiedName) triplet).getFQName();
                     ResourceKey key = null;
@@ -712,7 +712,7 @@ public class AfpCombine {
                         if (file.renamings.containsKey(key)) {
                             String newName = file.renamings.get(key);
                             ((FullyQualifiedName) triplet).setFQName(newName);
-                            log.trace("rename {}", newName);
+                            LOGGER.trace("rename {}", newName);
                             result = Filter.STATE.MODIFIED;
                         }
                     }
@@ -726,12 +726,12 @@ public class AfpCombine {
     private Filter.STATE rename(InputFile file, MMO sf) {
         STATE result = Filter.STATE.UNTOUCHED;
         for (MMORG rg : sf.getRg()) {
-            log.trace("{}", rg);
+            LOGGER.trace("{}", rg);
             ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_OVERLAY, rg.getOVLname());
             if (file.renamings.containsKey(key)) {
                 String newName = file.renamings.get(key);
                 rg.setOVLname(newName);
-                log.trace("rename {}", newName);
+                LOGGER.trace("rename {}", newName);
                 result = Filter.STATE.MODIFIED;
             }
         }
@@ -739,14 +739,14 @@ public class AfpCombine {
     }
 
     private Filter.STATE rename(MPG sf) {
-        log.warn("MPG is not supported: {}", sf);
+        LOGGER.warn("MPG is not supported: {}", sf);
         return Filter.STATE.UNTOUCHED;
     }
 
     private Filter.STATE rename(InputFile file, MPO sf) {
         STATE result = Filter.STATE.UNTOUCHED;
         for (MPORG rg : sf.getRG()) {
-            log.trace("{}", rg);
+            LOGGER.trace("{}", rg);
             for (Triplet t : rg.getTriplets()) {
                 if (t instanceof FullyQualifiedName)
                     if (((FullyQualifiedName) t).getFQNType() == FullyQualifiedNameFQNType.CONST_RESOURCE_OBJECT_REFERENCE_VALUE) {
@@ -754,7 +754,7 @@ public class AfpCombine {
                         if (file.renamings.containsKey(key)) {
                             String newName = file.renamings.get(key);
                             ((FullyQualifiedName) t).setFQName(newName);
-                            log.trace("rename {}", newName);
+                            LOGGER.trace("rename {}", newName);
                             result = Filter.STATE.MODIFIED;
                         }
                     }
@@ -771,7 +771,7 @@ public class AfpCombine {
             if (file.renamings.containsKey(key)) {
                 String newName = file.renamings.get(key);
                 rg.setPsegName(newName);
-                log.trace("rename {}", newName);
+                LOGGER.trace("rename {}", newName);
                 result = Filter.STATE.MODIFIED;
             }
         }
@@ -791,7 +791,7 @@ public class AfpCombine {
             if (!resourceNames.contains(res))
                 return res.toUpperCase();
         }
-        log.error("unable to find a resource name for hash " + hash);
+        LOGGER.error("unable to find a resource name for hash " + hash);
         throw new IllegalStateException(
                 "unable to find a resource name for hash " + hash);
     }
@@ -807,7 +807,7 @@ public class AfpCombine {
             if (!mmNames.contains(res))
                 return res.toUpperCase();
         }
-        log.error("unable to find a resource name for hash " + hash);
+        LOGGER.error("unable to find a resource name for hash " + hash);
         throw new IllegalStateException(
                 "unable to find a resource name for hash " + hash);
     }
