@@ -44,7 +44,6 @@ public class AfpCombine {
 
     static class InputFile {
         private final Path path;
-        File file;
         List<ResourceKey> resources = new LinkedList<>();
         Map<ResourceKey, Resource> filePos = new HashMap<>();
         Map<ResourceKey, String> renamings = new HashMap<>();
@@ -56,7 +55,10 @@ public class AfpCombine {
 
         public InputFile(Path path) {
             this.path = path;
-            this.file = path.toFile();
+        }
+
+        String getName() {
+            return path.getFileName().toString();
         }
     }
 
@@ -161,7 +163,7 @@ public class AfpCombine {
                     if (sf instanceof BMM && isFirstFormdef) {
                         BMM bmm = (BMM) sf;
                         mmName = bmm.getMMName();
-                        LOGGER.debug("{}: found medium map {}", inputFile.file, mmName);
+                        LOGGER.debug("{}: found medium map {}", inputFile.getName(), mmName);
                         inputFile.mmNames.add(mmName);
                         inputFile.mediumMaps.put(mmName, mediumMap = new MediumMap());
                         mediumMap.start = prevFilePos;
@@ -185,7 +187,7 @@ public class AfpCombine {
                                 if (!mmNames.contains(mmName))
                                     mmNames.add(mmName);
 
-                                LOGGER.debug("{}@{}-{}: found {}, hash {}", inputFile.file, mediumMap.start, mediumMap.end, mmName, mediumMap.hash);
+                                LOGGER.debug("{}@{}-{}: found {}, hash {}", inputFile.getName(), mediumMap.start, mediumMap.end, mmName, mediumMap.hash);
                             }
                         }
 
@@ -211,7 +213,7 @@ public class AfpCombine {
                                 if (checkResourceEquality) resource.content = byteArray;
                                 if (!resourceNames.contains(key.getName()))
                                     resourceNames.add(key.getName());
-                                LOGGER.debug("{}@{}-{}: found {}, hash {}", inputFile.file, resource.start, resource.end, key, resource.hash);
+                                LOGGER.debug("{}@{}-{}: found {}, hash {}", inputFile.getName(), resource.start, resource.end, key, resource.hash);
                             }
 
                             buffer = null;
@@ -234,7 +236,7 @@ public class AfpCombine {
                 InputFile f1 = inputFiles[i];
                 InputFile f2 = inputFiles[j];
 
-                LOGGER.debug("comparing resources in {} and {}", f1.file.getName(), f2.file.getName());
+                LOGGER.debug("comparing resources in {} and {}", f1.getName(), f2.getName());
 
                 for (ResourceKey k1 : f1.resources) {
                     if (f2.resources.contains(k1)
@@ -245,16 +247,16 @@ public class AfpCombine {
                         if (h1.equals(h2) && equals(f1.filePos.get(k1).content, f2.filePos.get(k1).content)) {
                             if (f1.renamings.containsKey(k1)) {
                                 String newName = f1.renamings.get(k1);
-                                LOGGER.debug("resource {} is same in {} and {}, but being renamed to {}", k1.getName(), f1.file.getName(), f2.file.getName(), newName);
+                                LOGGER.debug("resource {} is same in {} and {}, but being renamed to {}", k1.getName(), f1.getName(), f2.getName(), newName);
                                 f2.renamings.put(k1, newName);
                             } else {
-                                LOGGER.debug("resource {} is same in {} and {}", k1.getName(), f1.file.getName(), f2.file.getName());
+                                LOGGER.debug("resource {} is same in {} and {}", k1.getName(), f1.getName(), f2.getName());
                             }
                         } else {
                             String newName = getNewResourceName(k1.getName(), h2);
                             f2.renamings.put(k1, newName);
                             resourceNames.add(newName);
-                            LOGGER.debug("{}: renaming resource {} to {}", f2.file.getName(), k1.getName(), newName);
+                            LOGGER.debug("{}: renaming resource {} to {}", f2.getName(), k1.getName(), newName);
                         }
                     }
                 }
@@ -270,16 +272,16 @@ public class AfpCombine {
                                 && equals(f1.mediumMaps.get(mmName).content, f2.mediumMaps.get(mmName).content)) {
                             if (f1.renameIMM.containsKey(mmName)) {
                                 String newName = f1.renameIMM.get(mmName);
-                                LOGGER.debug("medium map {} is same in {} and {}, but being renamed to {}", mmName, f1.file.getName(), f2.file.getName(), newName);
+                                LOGGER.debug("medium map {} is same in {} and {}, but being renamed to {}", mmName, f1.getName(), f2.getName(), newName);
                                 f2.renameIMM.put(mmName, newName);
                             } else {
-                                LOGGER.debug("medium map {} is same in {} and {}", mmName, f1.file.getName(), f2.file.getName());
+                                LOGGER.debug("medium map {} is same in {} and {}", mmName, f1.getName(), f2.getName());
                             }
                         } else {
                             String newName = getNewFormdefName(mmName, h2);
                             f2.renameIMM.put(mmName, newName);
                             mmNames.add(newName);
-                            LOGGER.debug("{}: renaming medium map {} to {}", f2.file.getName(), mmName, newName);
+                            LOGGER.debug("{}: renaming medium map {} to {}", f2.getName(), mmName, newName);
                         }
 
                     }
@@ -328,12 +330,12 @@ public class AfpCombine {
                     }
 
                     bmm.setMMName(newName);
-                    LOGGER.debug("writing medium map {} as {} from {}", mmName, bmm.getMMName(), inputFile.file.getName());
+                    LOGGER.debug("writing medium map {} as {} from {}", mmName, bmm.getMMName(), inputFile.getName());
                 } else if (mmsWritten.contains(mmName)) {
                     LOGGER.debug("not writing medium map {} again", mmName);
                     continue;
                 } else {
-                    LOGGER.debug("writing medium map {} from {}", mmName, inputFile.file.getName());
+                    LOGGER.debug("writing medium map {} from {}", mmName, inputFile.getName());
                 }
 
                 formdef.add(bmm);
@@ -433,13 +435,13 @@ public class AfpCombine {
                             }
                             renameBRSERS(brs, newName);
                             resourcesWritten.add(newkey);
-                            LOGGER.debug("writing resource {} as {} from {}", key.getName(), newName, inputFile.file.getName());
+                            LOGGER.debug("writing resource {} as {} from {}", key.getName(), newName, inputFile.getName());
                         } else if (resourcesWritten.contains(key)) {
                             LOGGER.debug("not writing resource {} again", key.getName());
                             continue;
                         } else {
                             resourcesWritten.add(key);
-                            LOGGER.debug("writing resource {} from {}", key.getName(), inputFile.file.getName());
+                            LOGGER.debug("writing resource {} from {}", key.getName(), inputFile.getName());
                         }
 
                         aout.writeStructuredField(brs);
@@ -450,7 +452,7 @@ public class AfpCombine {
                             aout.write(buffer, 0, l);
                             left -= l;
                         }
-                        if (left > 0) throw new IOException("couldn't copy resource from " + inputFile.file.getName());
+                        if (left > 0) throw new IOException("couldn't copy resource from " + inputFile.getName());
 
                         ERS ers = (ERS) ain.readStructuredField();
                         if (inputFile.renamings.containsKey(key)) {
@@ -489,7 +491,7 @@ public class AfpCombine {
 
     private void writeDocuments() throws IOException {
         for (InputFile inputFile : inputFiles) {
-            LOGGER.info("writing documents from {}", inputFile.file.getName());
+            LOGGER.info("writing documents from {}", inputFile.getName());
             try (final AfpInputStream ain = AfpFiles.newAfpInputStream(inputFile.path);
                  final AfpOutputStream aout = AfpFiles.newAfpBufferedOutputStream(Paths.get(outFile))) {
 
