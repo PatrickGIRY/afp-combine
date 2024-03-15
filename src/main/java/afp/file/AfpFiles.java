@@ -1,12 +1,13 @@
 package afp.file;
 
 import org.afplib.io.AfpInputStream;
+import org.afplib.io.AfpOutputStream;
 
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 import static java.util.Objects.requireNonNull;
 
@@ -27,6 +28,11 @@ public final class AfpFiles {
     private static FileInputStream newFileInputStream(Path path) throws FileNotFoundException {
         requireNonNull(path, "Path is required");
         return new FileInputStream(path.toFile());
+    }
+
+    public static AfpOutputStream newAfpBufferedOutputStream(Path path) throws IOException {
+        return new AfpOutputStream(
+                new BufferedOutputStream(Files.newOutputStream(path, StandardOpenOption.APPEND)));
     }
 
     private AfpFiles() {

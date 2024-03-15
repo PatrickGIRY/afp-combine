@@ -18,8 +18,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -493,13 +495,12 @@ public class AFPCombine {
         for (int i = 0; i < inFiles.length; i++) {
             log.info("writing documents from {}", files[i].file.getName());
             try (final AfpInputStream ain = AfpFiles.newAfpInputStream(files[i].path);
-                 AfpOutputStream out = new AfpOutputStream(
-                         new BufferedOutputStream(new FileOutputStream(outFile, true)))) {
+                 final AfpOutputStream aout = AfpFiles.newAfpBufferedOutputStream(Paths.get(outFile))) {
 
                 ain.position(files[i].documentStart);
                 final InputFile file = files[i];
 
-                AfpFilter.filter(ain, out, sf -> {
+                AfpFilter.filter(ain, aout, sf -> {
                     log.trace("{}", sf);
                     switch (sf.getId()) {
                         case SFName.IMM_VALUE:
