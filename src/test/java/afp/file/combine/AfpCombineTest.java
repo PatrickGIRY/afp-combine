@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class AFPCombineTest {
+class AfpCombineTest {
 
     private static final String START_AFP = "/testdata/start.afp";
     private static final String ENDE_AFP = "/testdata/ende.afp";
@@ -23,7 +23,7 @@ class AFPCombineTest {
         final Path output = Files.createTempFile("out", "afp");
         getResourcePath(START_AFP).ifPresent(start ->
                 getResourcePath(ENDE_AFP).ifPresent(ende -> {
-                    AFPCombine combine = new AFPCombine(output.toAbsolutePath().toString(),
+                    AfpCombine combine = new AfpCombine(output.toAbsolutePath().toString(),
                             Stream.of(start, start, ende, ende)
                                     .map(path -> path.toAbsolutePath().toString())
                                     .toArray(String[]::new));

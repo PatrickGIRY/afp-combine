@@ -25,9 +25,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.stream.Stream;
 
-public class AFPCombine {
+public class AfpCombine {
 
-    private static final Logger log = LoggerFactory.getLogger(AFPCombine.class);
+    private static final Logger log = LoggerFactory.getLogger(AfpCombine.class);
 
     static class Resource {
         long start, end, ersPos;
@@ -77,7 +77,7 @@ public class AFPCombine {
         log.debug("out: {}", out);
 
         try {
-            new AFPCombine(out, f.toArray(new String[0])).run();
+            new AfpCombine(out, f.toArray(new String[0])).run();
         } catch (Exception e) {
             log.error("Error", e);
             System.exit(1);
@@ -95,7 +95,7 @@ public class AFPCombine {
     private SF[] formdef;
     private final boolean checkResourceEquality = true;
 
-    public AFPCombine(String outFile, String[] inFiles) {
+    public AfpCombine(String outFile, String[] inFiles) {
         this.outFile = outFile;
         this.inFiles = inFiles;
         files = Stream.of(inFiles) //
