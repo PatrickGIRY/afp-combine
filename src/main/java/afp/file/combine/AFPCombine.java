@@ -1,71 +1,8 @@
 package afp.file.combine;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Stream;
-
+import afp.file.AfpFiles;
 import org.afplib.ResourceKey;
-import org.afplib.afplib.AfplibFactory;
-import org.afplib.afplib.BDG;
-import org.afplib.afplib.BFM;
-import org.afplib.afplib.BMM;
-import org.afplib.afplib.BRG;
-import org.afplib.afplib.BRS;
-import org.afplib.afplib.EDG;
-import org.afplib.afplib.EFM;
-import org.afplib.afplib.EMM;
-import org.afplib.afplib.ERG;
-import org.afplib.afplib.ERS;
-import org.afplib.afplib.FGD;
-import org.afplib.afplib.FullyQualifiedName;
-import org.afplib.afplib.FullyQualifiedNameFQNType;
-import org.afplib.afplib.IMM;
-import org.afplib.afplib.IOB;
-import org.afplib.afplib.IPO;
-import org.afplib.afplib.IPS;
-import org.afplib.afplib.MCC;
-import org.afplib.afplib.MCF;
-import org.afplib.afplib.MCF1;
-import org.afplib.afplib.MCF1RG;
-import org.afplib.afplib.MCFRG;
-import org.afplib.afplib.MDD;
-import org.afplib.afplib.MDR;
-import org.afplib.afplib.MDRRG;
-import org.afplib.afplib.MFC;
-import org.afplib.afplib.MMC;
-import org.afplib.afplib.MMD;
-import org.afplib.afplib.MMO;
-import org.afplib.afplib.MMORG;
-import org.afplib.afplib.MMT;
-import org.afplib.afplib.MPG;
-import org.afplib.afplib.MPO;
-import org.afplib.afplib.MPORG;
-import org.afplib.afplib.MPS;
-import org.afplib.afplib.MPSRG;
-import org.afplib.afplib.ObjectClassification;
-import org.afplib.afplib.PEC;
-import org.afplib.afplib.PGP;
-import org.afplib.afplib.PGP1;
-import org.afplib.afplib.PMC;
-import org.afplib.afplib.ResourceObjectType;
-import org.afplib.afplib.ResourceObjectTypeObjType;
-import org.afplib.afplib.SFName;
+import org.afplib.afplib.*;
 import org.afplib.base.SF;
 import org.afplib.base.Triplet;
 import org.afplib.io.AfpFilter;
@@ -78,6 +15,15 @@ import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
+import java.util.stream.Stream;
 
 public class AFPCombine {
 
@@ -178,8 +124,7 @@ public class AFPCombine {
 
     private void scanResources() throws IOException {
         for (int i = 0; i < inFiles.length; i++) {
-            try (FileInputStream fin = new FileInputStream(files[i].file);
-                 AfpInputStream ain = new AfpInputStream(new BufferedInputStream(fin))) {
+            try (final AfpInputStream ain = AfpFiles.newAfpBufferedInputStream(files[i].path)) {
                 SF sf;
                 long filepos, prevFilePos = 0;
                 ByteArrayOutputStream buffer = null;
@@ -470,7 +415,7 @@ public class AFPCombine {
             log.info("writing resource group");
 
             for (int i = 0; i < inFiles.length; i++) {
-                try (FileInputStream fin = new FileInputStream(inFiles[i]); AfpInputStream ain = new AfpInputStream(fin)) {
+                try (final AfpInputStream ain = AfpFiles.newAfpInputStream(files[i].path)) {
                     for (ResourceKey key : files[i].resources) {
 
                         if (key.getType() == ResourceObjectTypeObjType.CONST_FORM_MAP_VALUE) {
@@ -503,7 +448,7 @@ public class AFPCombine {
                         byte[] buffer = new byte[8 * 1024];
                         int l;
                         long left = files[i].filePos.get(key).ersPos - ain.getCurrentOffset();
-                        while ((l = fin.read(buffer, 0, left > buffer.length ? buffer.length : (int) left)) > 0) {
+                        while ((l = ain.read(buffer, 0, left > buffer.length ? buffer.length : (int) left)) > 0) {
                             aout.write(buffer, 0, l);
                             left -= l;
                         }
@@ -547,14 +492,14 @@ public class AFPCombine {
     private void writeDocuments() throws IOException {
         for (int i = 0; i < inFiles.length; i++) {
             log.info("writing documents from {}", files[i].file.getName());
-            try (FileInputStream fin = new FileInputStream(inFiles[i]); AfpInputStream in = new AfpInputStream(fin);
+            try (final AfpInputStream ain = AfpFiles.newAfpInputStream(files[i].path);
                  AfpOutputStream out = new AfpOutputStream(
                          new BufferedOutputStream(new FileOutputStream(outFile, true)))) {
 
-                in.position(files[i].documentStart);
+                ain.position(files[i].documentStart);
                 final InputFile file = files[i];
 
-                AfpFilter.filter(in, out, sf -> {
+                AfpFilter.filter(ain, out, sf -> {
                     log.trace("{}", sf);
                     switch (sf.getId()) {
                         case SFName.IMM_VALUE:
