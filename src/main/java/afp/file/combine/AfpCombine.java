@@ -20,6 +20,7 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -392,7 +393,7 @@ public class AfpCombine {
     private void writeResourceGroup() throws IOException {
         LinkedList<ResourceKey> resourcesWritten = new LinkedList<>();
 
-        try (AfpOutputStream aout = new AfpOutputStream(new BufferedOutputStream(new FileOutputStream(outFile, false)))) {
+        try (AfpOutputStream aout = AfpFiles.newAfpBufferedOutputStream(Paths.get(outFile), StandardOpenOption.CREATE)) {
             BRG brg = AfplibFactory.eINSTANCE.createBRG();
             aout.writeStructuredField(brg);
 
@@ -493,7 +494,7 @@ public class AfpCombine {
         for (InputFile inputFile : inputFiles) {
             LOGGER.info("writing documents from {}", inputFile.getName());
             try (final AfpInputStream ain = AfpFiles.newAfpInputStream(inputFile.path);
-                 final AfpOutputStream aout = AfpFiles.newAfpBufferedOutputStream(Paths.get(outFile))) {
+                 final AfpOutputStream aout = AfpFiles.newAfpBufferedOutputStream(Paths.get(outFile), StandardOpenOption.APPEND)) {
 
                 ain.position(inputFile.documentStart);
                 final InputFile file = inputFile;

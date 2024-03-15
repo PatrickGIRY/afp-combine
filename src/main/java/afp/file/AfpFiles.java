@@ -5,23 +5,23 @@ import org.afplib.io.AfpOutputStream;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 
 import static java.util.Objects.requireNonNull;
 
 public final class AfpFiles {
 
     public static AfpInputStream newAfpBufferedInputStream(Path path) throws FileNotFoundException {
-        return neeAfpInputStreamFrom(new BufferedInputStream(newFileInputStream(path)));
+        return newAfpInputStreamFrom(new BufferedInputStream(newFileInputStream(path)));
     }
 
-    private static AfpInputStream neeAfpInputStreamFrom(InputStream inputStream) {
+    private static AfpInputStream newAfpInputStreamFrom(InputStream inputStream) {
         return new AfpInputStream(inputStream);
     }
 
     public static AfpInputStream newAfpInputStream(Path path) throws FileNotFoundException {
-        return neeAfpInputStreamFrom(newFileInputStream(path));
+        return newAfpInputStreamFrom(newFileInputStream(path));
     }
 
     private static FileInputStream newFileInputStream(Path path) throws FileNotFoundException {
@@ -29,9 +29,9 @@ public final class AfpFiles {
         return new FileInputStream(path.toFile());
     }
 
-    public static AfpOutputStream newAfpBufferedOutputStream(Path path) throws IOException {
+    public static AfpOutputStream newAfpBufferedOutputStream(Path path, OpenOption... options) throws IOException {
         return new AfpOutputStream(
-                new BufferedOutputStream(Files.newOutputStream(path, StandardOpenOption.APPEND)));
+                new BufferedOutputStream(Files.newOutputStream(path, options)));
     }
 
     private AfpFiles() {
