@@ -124,7 +124,7 @@ public class AfpCombine {
     }
 
     private void scanResources() throws IOException {
-        for (InputFile inputFile : inputFiles) {
+        for (final InputFile inputFile : inputFiles) {
             try (final AfpInputStream ain = AfpFiles.newAfpBufferedInputStream(inputFile.path)) {
                 SF sf;
                 long filepos, prevFilePos = 0;
@@ -415,7 +415,7 @@ public class AfpCombine {
 
             LOGGER.info("writing resource group");
 
-            for (InputFile inputFile : inputFiles) {
+            for (final InputFile inputFile : inputFiles) {
                 try (final AfpInputStream ain = AfpFiles.newAfpInputStream(inputFile.path)) {
                     for (ResourceKey key : inputFile.resources) {
 
@@ -491,41 +491,40 @@ public class AfpCombine {
     }
 
     private void writeDocuments() throws IOException {
-        for (InputFile inputFile : inputFiles) {
+        for (final InputFile inputFile : inputFiles) {
             LOGGER.info("writing documents from {}", inputFile.getName());
             try (final AfpInputStream ain = AfpFiles.newAfpInputStream(inputFile.path);
                  final AfpOutputStream aout = AfpFiles.newAfpBufferedOutputStream(Paths.get(outFile), StandardOpenOption.APPEND)) {
 
                 ain.position(inputFile.documentStart);
-                final InputFile file = inputFile;
 
                 AfpFilter.filter(ain, aout, sf -> {
                     LOGGER.trace("{}", sf);
                     switch (sf.getId()) {
                         case SFName.IMM_VALUE:
-                            return rename(file, (IMM) sf);
+                            return rename(inputFile, (IMM) sf);
                         case SFName.IOB_VALUE:
-                            return rename(file, (IOB) sf);
+                            return rename(inputFile, (IOB) sf);
                         case SFName.IPG_VALUE:
                             return rename();
                         case SFName.IPO_VALUE:
-                            return rename(file, (IPO) sf);
+                            return rename(inputFile, (IPO) sf);
                         case SFName.IPS_VALUE:
-                            return rename(file, (IPS) sf);
+                            return rename(inputFile, (IPS) sf);
                         case SFName.MCF_VALUE:
-                            return rename(file, (MCF) sf);
+                            return rename(inputFile, (MCF) sf);
                         case SFName.MCF1_VALUE:
-                            return rename(file, (MCF1) sf);
+                            return rename(inputFile, (MCF1) sf);
                         case SFName.MDR_VALUE:
-                            return rename(file, (MDR) sf);
+                            return rename(inputFile, (MDR) sf);
                         case SFName.MMO_VALUE:
-                            return rename(file, (MMO) sf);
+                            return rename(inputFile, (MMO) sf);
                         case SFName.MPG_VALUE:
                             return rename((MPG) sf);
                         case SFName.MPO_VALUE:
-                            return rename(file, (MPO) sf);
+                            return rename(inputFile, (MPO) sf);
                         case SFName.MPS_VALUE:
-                            return rename(file, (MPS) sf);
+                            return rename(inputFile, (MPS) sf);
                     }
                     return STATE.UNTOUCHED;
                 });
@@ -547,9 +546,9 @@ public class AfpCombine {
         }
     }
 
-    private Filter.STATE rename(InputFile file, IMM imm) {
-        if (file.renameIMM.containsKey(imm.getMMPName())) {
-            String newName = file.renameIMM.get(imm.getMMPName());
+    private Filter.STATE rename(InputFile inputFile, IMM imm) {
+        if (inputFile.renameIMM.containsKey(imm.getMMPName())) {
+            String newName = inputFile.renameIMM.get(imm.getMMPName());
             imm.setMMPName(newName);
             overrideGid(imm.getTriplets(), newName);
             LOGGER.trace("rename {}", newName);
@@ -558,10 +557,10 @@ public class AfpCombine {
         return Filter.STATE.UNTOUCHED;
     }
 
-    private Filter.STATE rename(InputFile file, IOB sf) {
+    private Filter.STATE rename(InputFile inputFile, IOB sf) {
         ResourceKey key = ResourceKey.toResourceKey(sf);
-        if (file.renamings.containsKey(key)) {
-            String newName = file.renamings.get(key);
+        if (inputFile.renamings.containsKey(key)) {
+            String newName = inputFile.renamings.get(key);
             sf.setObjName(newName);
             overrideGid(sf.getTriplets(), newName);
             LOGGER.trace("rename {}", newName);
@@ -574,10 +573,10 @@ public class AfpCombine {
         return Filter.STATE.UNTOUCHED;
     }
 
-    private Filter.STATE rename(InputFile file, IPO sf) {
+    private Filter.STATE rename(InputFile inputFile, IPO sf) {
         ResourceKey key = ResourceKey.toResourceKey(sf);
-        if (file.renamings.containsKey(key)) {
-            String newName = file.renamings.get(key);
+        if (inputFile.renamings.containsKey(key)) {
+            String newName = inputFile.renamings.get(key);
             sf.setOvlyName(newName);
             overrideGid(sf.getTriplets(), newName);
             LOGGER.trace("rename {}", newName);
@@ -586,10 +585,10 @@ public class AfpCombine {
         return Filter.STATE.UNTOUCHED;
     }
 
-    private Filter.STATE rename(InputFile file, IPS sf) {
+    private Filter.STATE rename(InputFile inputFile, IPS sf) {
         ResourceKey key = ResourceKey.toResourceKey(sf);
-        if (file.renamings.containsKey(key)) {
-            String newName = file.renamings.get(key);
+        if (inputFile.renamings.containsKey(key)) {
+            String newName = inputFile.renamings.get(key);
             sf.setPsegName(newName);
             overrideGid(sf.getTriplets(), newName);
             LOGGER.trace("rename {}", newName);
@@ -598,7 +597,7 @@ public class AfpCombine {
         return Filter.STATE.UNTOUCHED;
     }
 
-    private Filter.STATE rename(InputFile file, MCF sf) {
+    private Filter.STATE rename(InputFile inputFile, MCF sf) {
         Filter.STATE result = Filter.STATE.UNTOUCHED;
         for (MCFRG rg : sf.getRG()) {
             for (Triplet t : rg.getTriplets()) {
@@ -607,8 +606,8 @@ public class AfpCombine {
                     LOGGER.trace("{}", fqn);
                     if (fqn.getFQNType() == FullyQualifiedNameFQNType.CONST_FONT_CHARACTER_SET_NAME_REFERENCE_VALUE) {
                         ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_FONT_CHARACTER_SET, fqn.getFQName());
-                        if (file.renamings.containsKey(key)) {
-                            String newName = file.renamings.get(key);
+                        if (inputFile.renamings.containsKey(key)) {
+                            String newName = inputFile.renamings.get(key);
                             fqn.setFQName(newName);
                             LOGGER.trace("rename {}", newName);
                             result = Filter.STATE.MODIFIED;
@@ -616,8 +615,8 @@ public class AfpCombine {
                     }
                     if (fqn.getFQNType() == FullyQualifiedNameFQNType.CONST_CODE_PAGE_NAME_REFERENCE_VALUE) {
                         ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_CODE_PAGE, fqn.getFQName());
-                        if (file.renamings.containsKey(key)) {
-                            String newName = file.renamings.get(key);
+                        if (inputFile.renamings.containsKey(key)) {
+                            String newName = inputFile.renamings.get(key);
                             fqn.setFQName(newName);
                             LOGGER.trace("rename {}", newName);
                             result = Filter.STATE.MODIFIED;
@@ -625,8 +624,8 @@ public class AfpCombine {
                     }
                     if (fqn.getFQNType() == FullyQualifiedNameFQNType.CONST_CODED_FONT_NAME_REFERENCE_VALUE) {
                         ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_CODED_FONT, fqn.getFQName());
-                        if (file.renamings.containsKey(key)) {
-                            String newName = file.renamings.get(key);
+                        if (inputFile.renamings.containsKey(key)) {
+                            String newName = inputFile.renamings.get(key);
                             fqn.setFQName(newName);
                             LOGGER.trace("rename {}", newName);
                             result = Filter.STATE.MODIFIED;
@@ -638,7 +637,7 @@ public class AfpCombine {
         return result;
     }
 
-    private Filter.STATE rename(InputFile file, MCF1 sf) {
+    private Filter.STATE rename(InputFile inputFile, MCF1 sf) {
         STATE result = Filter.STATE.UNTOUCHED;
         for (MCF1RG rg : sf.getRG()) {
             LOGGER.trace("{}", rg);
@@ -646,8 +645,8 @@ public class AfpCombine {
             byte[] fcsname = rg.getFCSName().getBytes(Charset.forName("IBM500"));
             if (fcsname[0] != (byte) 0xff && fcsname[1] != (byte) 0xff) {
                 ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_FONT_CHARACTER_SET, rg.getFCSName());
-                if (file.renamings.containsKey(key)) {
-                    String newName = file.renamings.get(key);
+                if (inputFile.renamings.containsKey(key)) {
+                    String newName = inputFile.renamings.get(key);
                     rg.setFCSName(newName);
                     LOGGER.trace("rename {}", newName);
                     result = Filter.STATE.MODIFIED;
@@ -657,8 +656,8 @@ public class AfpCombine {
             byte[] cfname = rg.getCFName().getBytes(Charset.forName("IBM500"));
             if (cfname[0] != (byte) 0xff && cfname[1] != (byte) 0xff) {
                 ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_CODED_FONT, rg.getCFName());
-                if (file.renamings.containsKey(key)) {
-                    String newName = file.renamings.get(key);
+                if (inputFile.renamings.containsKey(key)) {
+                    String newName = inputFile.renamings.get(key);
                     rg.setCFName(newName);
                     LOGGER.trace("rename {}", newName);
                     result = Filter.STATE.MODIFIED;
@@ -668,8 +667,8 @@ public class AfpCombine {
             byte[] cpname = rg.getCPName().getBytes(Charset.forName("IBM500"));
             if (cpname[0] != (byte) 0xff && cpname[1] != (byte) 0xff) {
                 ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_CODE_PAGE, rg.getCPName());
-                if (file.renamings.containsKey(key)) {
-                    String newName = file.renamings.get(key);
+                if (inputFile.renamings.containsKey(key)) {
+                    String newName = inputFile.renamings.get(key);
                     rg.setCPName(newName);
                     LOGGER.trace("rename {}", newName);
                     result = Filter.STATE.MODIFIED;
@@ -680,7 +679,7 @@ public class AfpCombine {
         return result;
     }
 
-    private Filter.STATE rename(InputFile file, MDR sf) {
+    private Filter.STATE rename(InputFile inputFile, MDR sf) {
         STATE result = Filter.STATE.UNTOUCHED;
 
         for (MDRRG rg : sf.getRG()) {
@@ -710,8 +709,8 @@ public class AfpCombine {
                         }
                     }
                     if (key != null) {
-                        if (file.renamings.containsKey(key)) {
-                            String newName = file.renamings.get(key);
+                        if (inputFile.renamings.containsKey(key)) {
+                            String newName = inputFile.renamings.get(key);
                             ((FullyQualifiedName) triplet).setFQName(newName);
                             LOGGER.trace("rename {}", newName);
                             result = Filter.STATE.MODIFIED;
@@ -724,13 +723,13 @@ public class AfpCombine {
         return result;
     }
 
-    private Filter.STATE rename(InputFile file, MMO sf) {
+    private Filter.STATE rename(InputFile inputFile, MMO sf) {
         STATE result = Filter.STATE.UNTOUCHED;
         for (MMORG rg : sf.getRg()) {
             LOGGER.trace("{}", rg);
             ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_OVERLAY, rg.getOVLname());
-            if (file.renamings.containsKey(key)) {
-                String newName = file.renamings.get(key);
+            if (inputFile.renamings.containsKey(key)) {
+                String newName = inputFile.renamings.get(key);
                 rg.setOVLname(newName);
                 LOGGER.trace("rename {}", newName);
                 result = Filter.STATE.MODIFIED;
@@ -744,7 +743,7 @@ public class AfpCombine {
         return Filter.STATE.UNTOUCHED;
     }
 
-    private Filter.STATE rename(InputFile file, MPO sf) {
+    private Filter.STATE rename(InputFile inputFile, MPO sf) {
         STATE result = Filter.STATE.UNTOUCHED;
         for (MPORG rg : sf.getRG()) {
             LOGGER.trace("{}", rg);
@@ -752,8 +751,8 @@ public class AfpCombine {
                 if (t instanceof FullyQualifiedName)
                     if (((FullyQualifiedName) t).getFQNType() == FullyQualifiedNameFQNType.CONST_RESOURCE_OBJECT_REFERENCE_VALUE) {
                         ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_OVERLAY, ((FullyQualifiedName) t).getFQName());
-                        if (file.renamings.containsKey(key)) {
-                            String newName = file.renamings.get(key);
+                        if (inputFile.renamings.containsKey(key)) {
+                            String newName = inputFile.renamings.get(key);
                             ((FullyQualifiedName) t).setFQName(newName);
                             LOGGER.trace("rename {}", newName);
                             result = Filter.STATE.MODIFIED;
@@ -764,13 +763,13 @@ public class AfpCombine {
         return result;
     }
 
-    private Filter.STATE rename(InputFile file, MPS sf) {
+    private Filter.STATE rename(InputFile inputFile, MPS sf) {
         STATE result = Filter.STATE.UNTOUCHED;
 
         for (MPSRG rg : sf.getFixedLengthRG()) {
             ResourceKey key = new ResourceKey(ResourceObjectTypeObjType.CONST_PAGE_SEGMENT, rg.getPsegName());
-            if (file.renamings.containsKey(key)) {
-                String newName = file.renamings.get(key);
+            if (inputFile.renamings.containsKey(key)) {
+                String newName = inputFile.renamings.get(key);
                 rg.setPsegName(newName);
                 LOGGER.trace("rename {}", newName);
                 result = Filter.STATE.MODIFIED;
