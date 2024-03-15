@@ -8,6 +8,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -16,6 +18,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.afplib.ResourceKey;
 import org.afplib.afplib.AfplibFactory;
@@ -94,6 +97,7 @@ public class AFPCombine {
     }
 
     static class InputFile {
+        private final Path path;
         File file;
         List<ResourceKey> resources = new LinkedList<>();
         Map<ResourceKey, Resource> filePos = new HashMap<>();
@@ -103,6 +107,11 @@ public class AFPCombine {
         LinkedList<SF> formdef = new LinkedList<>();
         LinkedList<String> mmNames = new LinkedList<>();
         Map<String, MediumMap> mediumMaps = new HashMap<>();
+
+        public InputFile(Path path) {
+            this.path = path;
+            this.file = path.toFile();
+        }
     }
 
     public static void main(String[] args) {
@@ -143,7 +152,10 @@ public class AFPCombine {
     public AFPCombine(String outFile, String[] inFiles) {
         this.outFile = outFile;
         this.inFiles = inFiles;
-        files = new InputFile[inFiles.length];
+        files = Stream.of(inFiles) //
+                .map(Paths::get) //
+                .map(InputFile::new) //
+                .toArray(InputFile[]::new);
         try {
             algorithm = MessageDigest.getInstance(System.getProperty("security.digest", "MD5"));
         } catch (NoSuchAlgorithmException e) {
@@ -166,9 +178,6 @@ public class AFPCombine {
 
     private void scanResources() throws IOException {
         for (int i = 0; i < inFiles.length; i++) {
-            files[i] = new InputFile();
-
-            files[i].file = new File(inFiles[i]);
             try (FileInputStream fin = new FileInputStream(files[i].file);
                  AfpInputStream ain = new AfpInputStream(new BufferedInputStream(fin))) {
                 SF sf;
