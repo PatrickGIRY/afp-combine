@@ -3,7 +3,7 @@ package afp.file.combine;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.net.URL;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -40,6 +40,13 @@ class AFPCombineTest {
     }
 
     private Optional<Path> getResourcePath(String name) {
-        return Optional.ofNullable(getClass().getResource(name)).map(URL::getPath).map(Paths::get);
+        return Optional.ofNullable(getClass().getResource(name))
+                .map(url -> {
+                    try {
+                        return url.toURI();
+                    } catch (URISyntaxException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).map(Paths::get);
     }
 }
