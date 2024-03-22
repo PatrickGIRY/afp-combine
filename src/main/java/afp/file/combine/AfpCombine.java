@@ -10,16 +10,15 @@ import org.afplib.io.AfpInputStream;
 import org.afplib.io.AfpOutputStream;
 import org.afplib.io.Filter;
 import org.afplib.io.Filter.STATE;
-import org.apache.commons.lang3.StringUtils;
 import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -63,33 +62,7 @@ public class AfpCombine {
         }
     }
 
-    public static void main(String[] args) {
-
-        LOGGER.info("starting...");
-
-        LinkedList<String> f = new LinkedList<>();
-        String out = null;
-
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("-o") && i + 1 < args.length)
-                out = args[++i];
-            else f.add(args[i]);
-        }
-
-        LOGGER.debug("in: {}", StringUtils.join(f, ':'));
-        LOGGER.debug("out: {}", out);
-
-        try {
-            new AfpCombine(out, f.toArray(new String[0])).run();
-        } catch (Exception e) {
-            LOGGER.error("Error", e);
-            System.exit(1);
-        }
-
-        LOGGER.info("done.");
-    }
-
-    private final String outFile;
+    private final Path outFile;
     private final InputFile[] inputFiles;
     private final MessageDigest algorithm;
     private final LinkedList<String> resourceNames = new LinkedList<>();
@@ -97,10 +70,9 @@ public class AfpCombine {
     private SF[] formdef;
     private final boolean checkResourceEquality = true;
 
-    public AfpCombine(String outFile, String[] inFiles) {
+    public AfpCombine(Path outFile, Path[] inFiles) {
         this.outFile = outFile;
         inputFiles = Stream.of(inFiles) //
-                .map(Paths::get) //
                 .map(InputFile::new) //
                 .toArray(InputFile[]::new);
         try {
@@ -393,7 +365,7 @@ public class AfpCombine {
     private void writeResourceGroup() throws IOException {
         LinkedList<ResourceKey> resourcesWritten = new LinkedList<>();
 
-        try (AfpOutputStream aout = AfpFiles.newAfpBufferedOutputStream(Paths.get(outFile), StandardOpenOption.CREATE)) {
+        try (AfpOutputStream aout = AfpFiles.newAfpBufferedOutputStream(outFile, StandardOpenOption.CREATE)) {
             BRG brg = AfplibFactory.eINSTANCE.createBRG();
             aout.writeStructuredField(brg);
 
@@ -494,7 +466,7 @@ public class AfpCombine {
         for (final InputFile inputFile : inputFiles) {
             LOGGER.info("writing documents from {}", inputFile.getName());
             try (final AfpInputStream ain = AfpFiles.newAfpInputStream(inputFile.path);
-                 final AfpOutputStream aout = AfpFiles.newAfpBufferedOutputStream(Paths.get(outFile), StandardOpenOption.APPEND)) {
+                 final AfpOutputStream aout = AfpFiles.newAfpBufferedOutputStream(outFile, StandardOpenOption.APPEND)) {
 
                 ain.position(inputFile.documentStart);
 

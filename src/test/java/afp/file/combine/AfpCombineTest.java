@@ -23,10 +23,10 @@ class AfpCombineTest {
         final Path output = Files.createTempFile("out", "afp");
         getResourcePath(START_AFP).ifPresent(start ->
                 getResourcePath(ENDE_AFP).ifPresent(ende -> {
-                    AfpCombine combine = new AfpCombine(output.toAbsolutePath().toString(),
+                    AfpCombine combine = new AfpCombine(output.toAbsolutePath(),
                             Stream.of(start, start, ende, ende)
-                                    .map(path -> path.toAbsolutePath().toString())
-                                    .toArray(String[]::new));
+                                    .map(Path::toAbsolutePath)
+                                    .toArray(Path[]::new));
                     try {
                         combine.run();
                         getResourcePath(EXPECTED_OUTPUT).ifPresent(expectedOutput ->
